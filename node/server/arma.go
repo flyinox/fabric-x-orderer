@@ -96,8 +96,13 @@ func launchAssembler(stop chan struct{}) func(configFile *os.File) {
 		srv := node.CreateGRPCAssembler(conf)
 		assembler := assembler.NewAssembler(conf, srv, lastConfigBlock, assemblerLogger)
 
+		// Register deliver service BEFORE starting the server to ensure it's ready
 		orderer.RegisterAtomicBroadcastServer(srv.Server(), assembler)
 
+		// Start server in goroutine
+		// Note: No delay needed here - Docker Compose healthcheck ensures readiness
+		// The healthcheck (TCP port check) will verify the server is ready before
+		// dependent services (like committer-sidecar) start
 		go func() {
 			_ = srv.Start()
 			close(stop)

@@ -1,5 +1,5 @@
-//go:build pkcs11
-// +build pkcs11
+//go:build !pkcs11
+// +build !pkcs11
 
 /*
 Copyright IBM Corp. All Rights Reserved.
@@ -13,17 +13,14 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/fabric-lib-go/bccsp/factory"
-	"github.com/hyperledger/fabric-lib-go/bccsp/pkcs11"
 	"github.com/hyperledger/fabric/msp"
 )
 
 func BuildLocalMSP(localMSPDir string, localMSPID string, bccspConfig *factory.FactoryOpts) msp.MSP {
 	// Initialize factoryOpts similar to fabric-ca's ConfigureBCCSP
-	// Reference: cbdc-biz/app/fabric-ca/util/configurebccsp.go
 	var factoryOpts *factory.FactoryOpts
 	if bccspConfig != nil {
 		// Create a new FactoryOpts and copy all fields from bccspConfig
-		// This ensures PKCS11 configuration is properly passed through
 		factoryOpts = &factory.FactoryOpts{
 			Default: bccspConfig.Default,
 		}
@@ -42,41 +39,7 @@ func BuildLocalMSP(localMSPDir string, localMSPID string, bccspConfig *factory.F
 			}
 		}
 
-		// Handle PKCS11 configuration (for HSM support)
-		// Copy all PKCS11 fields similar to how fabric-ca handles it
-		// This is the key difference from the original implementation
-		if bccspConfig.PKCS11 != nil {
-			// Create a new PKCS11Opts and copy all fields
-			p11Opts := &pkcs11.PKCS11Opts{
-				Security: bccspConfig.PKCS11.Security,
-				Hash:     bccspConfig.PKCS11.Hash,
-				Library:  bccspConfig.PKCS11.Library,
-				Label:    bccspConfig.PKCS11.Label,
-				Pin:      bccspConfig.PKCS11.Pin,
-			}
-
-			// Copy optional boolean fields
-			p11Opts.SoftwareVerify = bccspConfig.PKCS11.SoftwareVerify
-			p11Opts.Immutable = bccspConfig.PKCS11.Immutable
-
-			// Copy optional string fields
-			if bccspConfig.PKCS11.AltID != "" {
-				p11Opts.AltID = bccspConfig.PKCS11.AltID
-			}
-
-			// Copy KeyIDs if present (for SKI to CKA_ID mapping)
-			if len(bccspConfig.PKCS11.KeyIDs) > 0 {
-				p11Opts.KeyIDs = make([]pkcs11.KeyIDMapping, len(bccspConfig.PKCS11.KeyIDs))
-				for i, km := range bccspConfig.PKCS11.KeyIDs {
-					p11Opts.KeyIDs[i] = pkcs11.KeyIDMapping{
-						SKI: km.SKI,
-						ID:  km.ID,
-					}
-				}
-			}
-
-			factoryOpts.PKCS11 = p11Opts
-		}
+		// PKCS11 is not supported in this build
 	} else {
 		// If bccspConfig is nil, use default opts
 		factoryOpts = factory.GetDefaultOpts()

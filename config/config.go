@@ -259,10 +259,24 @@ func (config *Configuration) ExtractRouterConfig(configBlock *common.Block) *nod
 }
 
 func (config *Configuration) ExtractBatcherConfig(configBlock *common.Block) *nodeconfig.BatcherNodeConfig {
-	signingPrivateKey, err := utils.ReadPem(filepath.Join(config.LocalConfig.NodeLocalConfig.GeneralConfig.LocalMSPDir, "keystore", "priv_sk"))
-	if err != nil {
-		panic(fmt.Sprintf("error launching batcher, failed extracting batcher config: %s", err))
+	// Check if using HSM (PKCS11) mode
+	var signingPrivateKey []byte
+	useHSM := false
+	if config.LocalConfig.NodeLocalConfig.GeneralConfig.BCCSP != nil &&
+		config.LocalConfig.NodeLocalConfig.GeneralConfig.BCCSP.Default == "PKCS11" {
+		useHSM = true
 	}
+
+	if !useHSM {
+		// Software mode: read priv_sk file
+		var err error
+		signingPrivateKey, err = utils.ReadPem(filepath.Join(config.LocalConfig.NodeLocalConfig.GeneralConfig.LocalMSPDir, "keystore", "priv_sk"))
+		if err != nil {
+			panic(fmt.Sprintf("error launching batcher, failed extracting batcher config: %s", err))
+		}
+	}
+	// HSM mode: signingPrivateKey remains nil/empty, as the private key is accessed via MSP using SKI
+	var err error
 	if config.LocalConfig.NodeLocalConfig.GeneralConfig.MonitoringListenAddress == "" {
 		config.LocalConfig.NodeLocalConfig.GeneralConfig.MonitoringListenAddress = config.LocalConfig.NodeLocalConfig.GeneralConfig.ListenAddress
 	}
@@ -310,10 +324,23 @@ func (config *Configuration) ExtractBatcherConfig(configBlock *common.Block) *no
 }
 
 func (config *Configuration) ExtractConsenterConfig(configBlock *common.Block) *nodeconfig.ConsenterNodeConfig {
-	signingPrivateKey, err := utils.ReadPem(filepath.Join(config.LocalConfig.NodeLocalConfig.GeneralConfig.LocalMSPDir, "keystore", "priv_sk"))
-	if err != nil {
-		panic(fmt.Sprintf("error launching consenter, failed extracting consenter config: %s", err))
+	// Check if using HSM (PKCS11) mode
+	var signingPrivateKey []byte
+	useHSM := false
+	if config.LocalConfig.NodeLocalConfig.GeneralConfig.BCCSP != nil &&
+		config.LocalConfig.NodeLocalConfig.GeneralConfig.BCCSP.Default == "PKCS11" {
+		useHSM = true
 	}
+
+	if !useHSM {
+		// Software mode: read priv_sk file
+		var err error
+		signingPrivateKey, err = utils.ReadPem(filepath.Join(config.LocalConfig.NodeLocalConfig.GeneralConfig.LocalMSPDir, "keystore", "priv_sk"))
+		if err != nil {
+			panic(fmt.Sprintf("error launching consenter, failed extracting consenter config: %s", err))
+		}
+	}
+	// HSM mode: signingPrivateKey remains nil/empty, as the private key is accessed via MSP using SKI
 	BFTConfig, err := config.GetBFTConfig(config.LocalConfig.NodeLocalConfig.PartyID)
 	if err != nil {
 		panic(fmt.Sprintf("error launching consenter, failed extracting consenter config: %s", err))
